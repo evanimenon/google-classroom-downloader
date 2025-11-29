@@ -1,0 +1,14 @@
+# OAuth secrets
+credentials.json
+token.json
+
+# Download tracking
+download_index.json
+
+# Downloaded files
+downloads/
+
+# Environment
+venv/
+__pycache__/
+.DS_Store
