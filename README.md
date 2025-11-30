@@ -3,6 +3,8 @@
 Automatically download all attachments (assignments, materials, links, PDFs, Docs, Slides, etc.) from your Google Classroom courses using the official Google Classroom + Drive APIs.
 
 ---
+<img width="1496" height="934" alt="Screenshot 2025-11-30 at 11 49 51" src="https://github.com/user-attachments/assets/dbb28418-cc97-49e0-8400-b87227a8c655" />
+
 
 ## Features
 
