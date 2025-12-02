@@ -12,3 +12,4 @@ downloads/
 venv/
 __pycache__/
 .DS_Store
+/iiitd-resources
