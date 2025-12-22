@@ -1,10 +1,10 @@
 fastapi
 uvicorn
+starlette
+jinja2
 google-auth
 google-auth-oauthlib
 google-api-python-client
 python-multipart
 itsdangerous
-jinja2
 zipstream-new
-
