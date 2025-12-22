@@ -1,6 +1,6 @@
+import os
 import json
 from google_auth_oauthlib.flow import Flow
-from fastapi import Request
 
 SCOPES = [
     "https://www.googleapis.com/auth/classroom.courses.readonly",
@@ -8,19 +8,20 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive.readonly",
 ]
 
-import os
-
-CLIENT_SECRET = os.getenv("GOOGLE_OAUTH_FILE", "credentials.json")
-
-def get_flow(request: Request, state=None):
-    redirect_uri = request.url_for("oauth_callback")
-    print("REDIRECT URI USED:", redirect_uri)
-
-    return Flow.from_client_secrets_file(
-        CLIENT_SECRET,
+def get_flow(request, state=None):
+    client_config_str = os.environ.get("GOOGLE_OAUTH_JSON")
+    if not client_config_str:
+        raise ValueError("GOOGLE_OAUTH_JSON environment variable not set")
+    
+    client_config = json.loads(client_config_str)
+    
+    flow = Flow.from_client_config(
+        client_config,
         scopes=SCOPES,
-        state=state,
-        redirect_uri=redirect_uri,
+        state=state
     )
+    
 
-
+    flow.redirect_uri = str(request.url_for("oauth_callback"))
+        
+    return flow
