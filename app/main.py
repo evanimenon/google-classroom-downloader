@@ -45,20 +45,22 @@ def home():
 
 @app.get("/login")
 def login(request: Request):
-    if IS_CLOUD_RUN:
+    if os.environ.get("K_SERVICE"):
         request.scope["scheme"] = "https"
     try:
         flow = get_flow(request)
         auth_url, state = flow.authorization_url(
             access_type="offline",
-            include_granted_scopes=true,
+            include_granted_scopes="true",
             prompt="consent",
         )
         request.session["state"] = state
         return RedirectResponse(auth_url)
     except Exception as e:
-        logger.error(f"Error in /login: {e}")
-        raise HTTPException(status_code=500, detail="OAuth initialization failed")
+        import traceback
+        error_details = f"Error: {str(e)}\n{traceback.format_exc()}"
+        print(error_details)
+        raise HTTPException(status_code=500, detail=error_details)
 
 @app.get("/callback")
 def oauth_callback(request: Request):
