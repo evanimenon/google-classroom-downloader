@@ -28,15 +28,14 @@ if not SESSION_SECRET:
 
 app = FastAPI()
 
-# Necessary for Cloud Run to handle HTTPS redirects correctly
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET,
-    session_cookie="classroom_downloader_session",
+    session_cookie="google_classroom_session",
     same_site="lax",
-    https_only=False,  # Set to False to prevent the login loop if SSL proxying is picky
+    https_only=False,
 )
 
 templates = Jinja2Templates(directory="app/templates")
@@ -64,7 +63,6 @@ def login(request: Request):
 
 @app.get("/callback")
 def oauth_callback(request: Request):
-    # If this triggers, your browser is likely blocking the session cookie
     if "state" not in request.session:
         logger.error("Session state missing in callback")
         return RedirectResponse("/login")
@@ -74,7 +72,6 @@ def oauth_callback(request: Request):
 
     try:
         flow = get_flow(request, request.session["state"])
-        # Use str(request.url) to ensure the full HTTPS URL is passed to Google
         flow.fetch_token(authorization_response=str(request.url))
         request.session["token"] = json.loads(flow.credentials.to_json())
         return RedirectResponse("/courses")
@@ -112,7 +109,6 @@ def download(request: Request, course_ids: list[str] = Form(...)):
         for cid in course_ids:
             files = list_course_files(classroom, cid)
             for fid, name in files:
-                # Use the helper to get raw bytes from Drive
                 file_name, data = download_file_bytes(drive, fid)
                 yield f"{cid}/{file_name}", data
 
