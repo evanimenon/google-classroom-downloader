@@ -1,17 +1,27 @@
-# OAuth secrets
-credentials.json
-credentials-app.json
+# OAuth secrets & Tokens 
+*.json
+!download_index.json
+!app/templates/*.json
+
+.env
 token.json
+credentials*
 
-# Download tracking
-download_index.json
-
-# Downloaded files
-downloads/
-
-# Environment
-venv/
-__pycache__/
+# System & OS files
 .DS_Store
-/iiitd-resources
-/google-cloud-sdk
+Thumbs.db
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+ENV/
+
+# Large local data/SDKs
+downloads/
+iiitd-resources/
+google-cloud-sdk/
+
+# Logs
+*.log
