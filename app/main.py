@@ -12,7 +12,7 @@ from app.drive import download_file_bytes
 from app.zipstreamer import stream_zip
 
 app = FastAPI()
-app.add_middleware(SessionMiddleware, secret_key="CHANGE_ME")
+app.add_middleware(SessionMiddleware, secret_key="SESSION_SECRET")
 
 templates = Jinja2Templates(directory="app/templates")
 
