@@ -25,6 +25,10 @@ def get_flow(request, state=None):
         state=state
     )
     
-    flow.redirect_uri = str(request.url_for("oauth_callback"))
+    full_url = str(request.url_for("oauth_callback"))
+    if "run.app" in full_url:
+        full_url = full_url.replace("http://", "https://")
+    
+    flow.redirect_uri = full_url
         
     return flow
