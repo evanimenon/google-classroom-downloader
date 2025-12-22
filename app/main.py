@@ -28,13 +28,15 @@ if not SESSION_SECRET:
 
 app = FastAPI()
 
+# Necessary for Cloud Run to handle HTTPS redirects correctly
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET,
+    session_cookie="classroom_downloader_session",
     same_site="lax",
-    https_only=IS_CLOUD_RUN,
+    https_only=False,  # Set to False to prevent the login loop if SSL proxying is picky
 )
 
 templates = Jinja2Templates(directory="app/templates")
@@ -45,7 +47,7 @@ def home():
 
 @app.get("/login")
 def login(request: Request):
-    if os.environ.get("K_SERVICE"):
+    if IS_CLOUD_RUN:
         request.scope["scheme"] = "https"
     try:
         flow = get_flow(request)
@@ -57,14 +59,14 @@ def login(request: Request):
         request.session["state"] = state
         return RedirectResponse(auth_url)
     except Exception as e:
-        import traceback
-        error_details = f"Error: {str(e)}\n{traceback.format_exc()}"
-        print(error_details)
-        raise HTTPException(status_code=500, detail=error_details)
+        logger.error(f"Login Init Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/callback")
 def oauth_callback(request: Request):
+    # If this triggers, your browser is likely blocking the session cookie
     if "state" not in request.session:
+        logger.error("Session state missing in callback")
         return RedirectResponse("/login")
 
     if IS_CLOUD_RUN:
@@ -72,6 +74,7 @@ def oauth_callback(request: Request):
 
     try:
         flow = get_flow(request, request.session["state"])
+        # Use str(request.url) to ensure the full HTTPS URL is passed to Google
         flow.fetch_token(authorization_response=str(request.url))
         request.session["token"] = json.loads(flow.credentials.to_json())
         return RedirectResponse("/courses")
@@ -108,8 +111,9 @@ def download(request: Request, course_ids: list[str] = Form(...)):
     def gen():
         for cid in course_ids:
             files = list_course_files(classroom, cid)
-            for fid, _ in files:
-                name, data = download_file_bytes(drive, fid)
-                yield f"{cid}/{name}", data
+            for fid, name in files:
+                # Use the helper to get raw bytes from Drive
+                file_name, data = download_file_bytes(drive, fid)
+                yield f"{cid}/{file_name}", data
 
     return stream_zip(gen())
