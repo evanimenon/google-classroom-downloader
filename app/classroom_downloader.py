@@ -98,28 +98,28 @@ def save_index(downloaded_ids: Set[str]) -> None:
 # ---------- CLASSROOM HELPERS ----------
 
 def list_all_courses(classroom_service, name_contains: str = None) -> List[Dict]:
-    """
-    List all courses the user is enrolled in. Optionally filter by name substring.
-    """
     courses: List[Dict] = []
     page_token = None
 
     while True:
         resp = classroom_service.courses().list(
-            pageToken=page_token
+            pageToken=page_token,
+            courseStates=["ACTIVE", "ARCHIVED"]
         ).execute()
-        cs = resp.get("courses", [])
-        for c in cs:
+
+        for c in resp.get("courses", []):
             if name_contains:
                 if name_contains.lower() in c.get("name", "").lower():
                     courses.append(c)
             else:
                 courses.append(c)
+
         page_token = resp.get("nextPageToken")
         if not page_token:
             break
 
     return courses
+
 
 
 def list_course_files(classroom_service, course_id: str) -> List[Tuple[str, str]]:
@@ -307,6 +307,45 @@ def parse_args():
     )
     return parser.parse_args()
 
+def select_courses_interactively(courses: List[Dict]) -> List[Dict]:
+    print("\nAvailable courses:\n")
+
+    print("[0] All courses")
+    for idx, c in enumerate(courses, start=1):
+        name = c.get("name", "Unnamed")
+        state = c.get("courseState", "UNKNOWN")
+        print(f"[{idx}] {name} ({state})")
+
+    raw = input(
+        "\nEnter course numbers to download "
+        "(e.g. 1,3 or 2-4 or 0 for all):\n> "
+    ).strip()
+
+    if raw == "0":
+        return courses
+
+    selected_indexes = set()
+
+    for part in raw.split(","):
+        part = part.strip()
+        if "-" in part:
+            start, end = part.split("-", 1)
+            selected_indexes.update(
+                range(int(start), int(end) + 1)
+            )
+        else:
+            selected_indexes.add(int(part))
+
+    selected = []
+    for i in selected_indexes:
+        if 1 <= i <= len(courses):
+            selected.append(courses[i - 1])
+
+    if not selected:
+        print("No valid courses selected. Exiting.")
+        exit(1)
+
+    return selected
 
 def main():
     args = parse_args()
@@ -329,7 +368,11 @@ def main():
 
     print(f"Found {len(courses)} course(s).")
 
-    for c in courses:
+    selected_courses = select_courses_interactively(courses)
+
+    print(f"\nSelected {len(selected_courses)} course(s) for download.")
+
+    for c in selected_courses:
         download_all_for_course(
             classroom_service,
             drive_service,
@@ -338,6 +381,7 @@ def main():
             downloaded_ids,
             dry_run=args.dry_run,
         )
+
 
     if not args.dry_run:
         print("\nSaving download index...")

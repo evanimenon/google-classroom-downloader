@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Classroom Downloader</title>
+</head>
+<body>
+<h2>Select Courses</h2>
+
+<form method="post" action="/download">
+  {% for c in courses %}
+    <input type="checkbox" name="course_ids" value="{{c.id}}">
+    {{c.name}}<br>
+  {% endfor %}
+  <br>
+  <button type="submit">Download ZIP</button>
+</form>
+</body>
+</html>

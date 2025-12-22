@@ -1,5 +1,6 @@
 # OAuth secrets
 credentials.json
+credentials-app.json
 token.json
 
 # Download tracking
@@ -13,3 +14,4 @@ venv/
 __pycache__/
 .DS_Store
 /iiitd-resources
+/google-cloud-sdk
