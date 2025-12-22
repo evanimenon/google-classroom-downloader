@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request, Form
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
@@ -12,13 +13,11 @@ from app.classroom import list_all_courses, list_course_files
 from app.drive import download_file_bytes
 from app.zipstreamer import stream_zip
 
-SESSION_SECRET = os.environ.get("SESSION_SECRET")
-if not SESSION_SECRET:
-    raise RuntimeError("SESSION_SECRET environment variable not set")
-
 app = FastAPI()
 
-app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+app.add_middleware(ProxyHeadersMiddleware)
+
+SESSION_SECRET = os.environ.get("SESSION_SECRET", "dev-secret")
 
 app.add_middleware(
     SessionMiddleware,
@@ -40,7 +39,7 @@ def login(request: Request):
     flow = get_flow(request)
     auth_url, state = flow.authorization_url(
         access_type="offline",
-        include_granted_scopes="true",
+        include_granted_scopes="false",
         prompt="consent",
     )
     request.session["state"] = state
