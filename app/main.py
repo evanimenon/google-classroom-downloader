@@ -18,6 +18,8 @@ if not SESSION_SECRET:
 
 app = FastAPI()
 
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+
 app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET,
