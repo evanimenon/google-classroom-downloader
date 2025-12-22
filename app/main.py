@@ -33,7 +33,7 @@ app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET,
-    session_cookie="google_classroom_session",
+    session_cookie="classroom_session_v3",
     same_site="lax",
     https_only=False,
 )
