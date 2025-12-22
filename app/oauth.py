@@ -4,6 +4,7 @@ from google_auth_oauthlib.flow import Flow
 
 SCOPES = [
     "https://www.googleapis.com/auth/classroom.courses.readonly",
+    "https://www.googleapis.com/auth/classroom.coursework.me.readonly",
     "https://www.googleapis.com/auth/classroom.courseworkmaterials.readonly",
     "https://www.googleapis.com/auth/drive.readonly",
 ]
@@ -13,7 +14,10 @@ def get_flow(request, state=None):
     if not client_config_str:
         raise ValueError("GOOGLE_OAUTH_JSON environment variable not set")
     
-    client_config = json.loads(client_config_str)
+    try:
+        client_config = json.loads(client_config_str)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON in GOOGLE_OAUTH_JSON: {e}")
     
     flow = Flow.from_client_config(
         client_config,
@@ -21,7 +25,6 @@ def get_flow(request, state=None):
         state=state
     )
     
-
     flow.redirect_uri = str(request.url_for("oauth_callback"))
         
     return flow
