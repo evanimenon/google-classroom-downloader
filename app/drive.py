@@ -1,4 +1,5 @@
 import io
+import re
 from googleapiclient.http import MediaIoBaseDownload
 
 GOOGLE_EXPORTS = {
@@ -13,25 +14,35 @@ GOOGLE_EXPORTS = {
     ),
 }
 
-def download_file_bytes(drive, file_id):
+
+def safe_filename(name: str) -> str:
+    name = re.sub(r"[^\w.\- ]+", "_", name or "file")
+    return name.strip()[:80] or "file"
+
+
+def download_file_bytes(drive, file_id: str):
     meta = drive.files().get(
-        fileId=file_id, fields="name,mimeType"
+        fileId=file_id,
+        fields="name,mimeType",
     ).execute()
 
-    mime = meta["mimeType"]
-    name = meta["name"]
+    name = safe_filename(meta.get("name"))
+    mime = meta.get("mimeType")
 
     if mime in GOOGLE_EXPORTS:
         export_mime, ext = GOOGLE_EXPORTS[mime]
-        req = drive.files().export_media(
-            fileId=file_id, mimeType=export_mime
+        request = drive.files().export_media(
+            fileId=file_id,
+            mimeType=export_mime,
         )
-        name += ext
+        if not name.lower().endswith(ext):
+            name += ext
     else:
-        req = drive.files().get_media(fileId=file_id)
+        request = drive.files().get_media(fileId=file_id)
 
     fh = io.BytesIO()
-    downloader = MediaIoBaseDownload(fh, req)
+    downloader = MediaIoBaseDownload(fh, request)
+
     done = False
     while not done:
         _, done = downloader.next_chunk()

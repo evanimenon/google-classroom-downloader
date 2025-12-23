@@ -1,47 +1,60 @@
 def list_all_courses(classroom):
     courses = []
-    page = None
+    page_token = None
+
     while True:
         resp = classroom.courses().list(
-            pageToken=page,
-            courseStates=["ACTIVE", "ARCHIVED"]
+            pageToken=page_token,
+            courseStates=["ACTIVE", "ARCHIVED"],
         ).execute()
+
         courses.extend(resp.get("courses", []))
-        page = resp.get("nextPageToken")
-        if not page:
+        page_token = resp.get("nextPageToken")
+        if not page_token:
             break
+
     return courses
 
 
 def list_course_files(classroom, course_id):
     files = []
 
-    cw_page = None
+    # Coursework
+    token = None
     while True:
         resp = classroom.courses().courseWork().list(
-            courseId=course_id, pageToken=cw_page
+            courseId=course_id,
+            pageToken=token,
         ).execute()
+
         for cw in resp.get("courseWork", []):
-            for m in cw.get("materials", []):
-                df = m.get("driveFile", {}).get("driveFile")
-                if df:
-                    files.append((df["id"], df.get("title", "file")))
-        cw_page = resp.get("nextPageToken")
-        if not cw_page:
+            title = cw.get("title", "Assignment")
+            for mat in cw.get("materials", []):
+                df = mat.get("driveFile", {}).get("driveFile")
+                if df and df.get("id"):
+                    files.append((df["id"], df.get("title", title)))
+
+        token = resp.get("nextPageToken")
+        if not token:
             break
 
-    m_page = None
+    # Coursework materials
+    token = None
     while True:
         resp = classroom.courses().courseWorkMaterials().list(
-            courseId=course_id, pageToken=m_page
+            courseId=course_id,
+            pageToken=token,
         ).execute()
-        for mat in resp.get("courseWorkMaterial", []):
-            for m in mat.get("materials", []):
-                df = m.get("driveFile", {}).get("driveFile")
-                if df:
-                    files.append((df["id"], df.get("title", "file")))
-        m_page = resp.get("nextPageToken")
-        if not m_page:
+
+        for m in resp.get("courseWorkMaterial", []):
+            title = m.get("title", "Material")
+            for mat in m.get("materials", []):
+                df = mat.get("driveFile", {}).get("driveFile")
+                if df and df.get("id"):
+                    files.append((df["id"], df.get("title", title)))
+
+        token = resp.get("nextPageToken")
+        if not token:
             break
 
     return files
