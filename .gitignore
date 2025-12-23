@@ -1,11 +1,11 @@
-# OAuth secrets & Tokens 
-*.json
+# OAuth & Secrets 
+credentials*.json
+token*.json
+.env
+
+# Allow safe JSON files
 !download_index.json
 !app/templates/*.json
-
-.env
-token.json
-credentials*
 
 # System & OS files
 .DS_Store
@@ -18,7 +18,7 @@ __pycache__/
 venv/
 ENV/
 
-# Large local data/SDKs
+# Large local data / SDKs
 downloads/
 iiitd-resources/
 google-cloud-sdk/
