@@ -9,27 +9,22 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive.readonly",
 ]
 
+REDIRECT_URI = "https://classroom-downloader-web-936773451602.asia-south1.run.app/callback"
 
-def get_flow(request, state=None):
+
+def get_flow(state=None):
     client_config_str = os.environ.get("GOOGLE_OAUTH_JSON")
     if not client_config_str:
-        raise ValueError("GOOGLE_OAUTH_JSON environment variable not set")
-    
+        raise RuntimeError("GOOGLE_OAUTH_JSON environment variable not set")
+
     try:
         client_config = json.loads(client_config_str)
     except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid JSON in GOOGLE_OAUTH_JSON: {e}")
-    
-    flow = Flow.from_client_config(
+        raise RuntimeError(f"Invalid GOOGLE_OAUTH_JSON: {e}")
+
+    return Flow.from_client_config(
         client_config,
         scopes=SCOPES,
-        state=state
+        state=state,
+        redirect_uri=REDIRECT_URI,
     )
-    
-    full_url = str(request.url_for("oauth_callback"))
-    if "run.app" in full_url:
-        full_url = full_url.replace("http://", "https://")
-    
-    flow.redirect_uri = full_url
-        
-    return flow

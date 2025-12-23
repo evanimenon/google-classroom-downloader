@@ -50,7 +50,7 @@ def login(request: Request):
     request.session.clear()
 
     try:
-        flow = get_flow(request)
+        flow = get_flow()
         auth_url, state = flow.authorization_url(
             access_type="offline",
             prompt="consent",
@@ -72,7 +72,7 @@ def oauth_callback(request: Request):
         return RedirectResponse("/login")
 
     try:
-        flow = get_flow(request, state=state)
+        flow = get_flow(state=state)
         flow.fetch_token(authorization_response=str(request.url))
 
         request.session["token"] = json.loads(
