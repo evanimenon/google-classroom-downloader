@@ -33,11 +33,12 @@ app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET,
     session_cookie="classroom_session_v5",
-    same_site="none" if IS_CLOUD_RUN else "lax",
-    https_only=IS_CLOUD_RUN,
+    same_site="none",
+    https_only=True,
 )
 
 templates = Jinja2Templates(directory="app/templates")
+
 
 @app.get("/")
 def home():
@@ -48,43 +49,41 @@ def home():
 def login(request: Request):
     request.session.clear()
 
-    if IS_CLOUD_RUN:
-        request.scope["scheme"] = "https"
-
     try:
         flow = get_flow(request)
         auth_url, state = flow.authorization_url(
             access_type="offline",
-            include_granted_scopes="true",
             prompt="consent",
         )
         request.session["state"] = state
+        logger.info("OAuth state saved: %s", state)
         return RedirectResponse(auth_url)
 
     except Exception as e:
-        logger.error(f"Login error: {e}")
+        logger.exception("Login error")
         raise HTTPException(status_code=500, detail="Login failed")
 
 
 @app.get("/callback")
 def oauth_callback(request: Request):
-    if IS_CLOUD_RUN:
-        request.scope["scheme"] = "https"
-
     state = request.session.get("state")
     if not state:
-        logger.error("Missing OAuth state (session cookie lost)")
+        logger.error("OAuth state missing — session cookie lost")
         return RedirectResponse("/login")
 
     try:
         flow = get_flow(request, state=state)
         flow.fetch_token(authorization_response=str(request.url))
 
-        request.session["token"] = json.loads(flow.credentials.to_json())
+        request.session["token"] = json.loads(
+            flow.credentials.to_json()
+        )
+
+        logger.info("OAuth success, token stored in session")
         return RedirectResponse("/courses")
 
     except Exception as e:
-        logger.error(f"OAuth callback failed: {e}")
+        logger.exception("OAuth callback failed")
         return RedirectResponse("/login")
 
 
