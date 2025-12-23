@@ -29,13 +29,16 @@ app = FastAPI()
 
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
+IS_LOCAL = os.environ.get("K_SERVICE") is None
+
 app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET,
     session_cookie="classroom_session_v5",
-    same_site="none",
-    https_only=True,
+    same_site="none" if not IS_LOCAL else "lax",#
+    https_only=not IS_LOCAL,#
 )
+
 
 templates = Jinja2Templates(directory="app/templates")
 
@@ -127,3 +130,15 @@ def download(request: Request, course_ids: list[str] = Form(...)):
                 yield f"{cid}/{name}", data
 
     return stream_zip(gen())
+
+@app.get("/api/courses/{course_id}/files")
+def get_course_files(request: Request, course_id: str):
+    if "token" not in request.session:
+        raise HTTPException(status_code=401)
+    
+    creds = Credentials.from_authorized_user_info(request.session["token"], SCOPES)
+    classroom = build("classroom", "v1", credentials=creds)
+    
+    files = list_course_files(classroom, course_id)
+    # Format: [{"id": "...", "name": "..."}, ...]
+    return [{"id": f[0], "name": f[1]} for f in files]
