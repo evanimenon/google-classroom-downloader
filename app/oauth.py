@@ -4,10 +4,11 @@ from google_auth_oauthlib.flow import Flow
 
 SCOPES = [
     "https://www.googleapis.com/auth/classroom.courses.readonly",
-    "https://www.googleapis.com/auth/classroom.coursework.me.readonly",
+    "https://www.googleapis.com/auth/classroom.coursework.students.readonly",
     "https://www.googleapis.com/auth/classroom.courseworkmaterials.readonly",
     "https://www.googleapis.com/auth/drive.readonly",
 ]
+
 
 def get_flow(request, state=None):
     client_config_str = os.environ.get("GOOGLE_OAUTH_JSON")

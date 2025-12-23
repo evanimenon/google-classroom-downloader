@@ -34,8 +34,9 @@ app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET,
     session_cookie="classroom_session_v5",
-    same_site="lax",
-    https_only=False,
+
+    same_site="none" if IS_CLOUD_RUN else "lax",
+    https_only=IS_CLOUD_RUN,
 )
 
 templates = Jinja2Templates(directory="app/templates")
@@ -46,6 +47,7 @@ def home():
 
 @app.get("/login")
 def login(request: Request):
+    request.session.clear()
     if IS_CLOUD_RUN:
         request.scope["scheme"] = "https"
     try:
