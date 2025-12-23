@@ -17,10 +17,7 @@ def get_flow(state=None):
     if not client_config_str:
         raise RuntimeError("GOOGLE_OAUTH_JSON environment variable not set")
 
-    try:
-        client_config = json.loads(client_config_str)
-    except json.JSONDecodeError as e:
-        raise RuntimeError(f"Invalid GOOGLE_OAUTH_JSON: {e}")
+    client_config = json.loads(client_config_str)
 
     return Flow.from_client_config(
         client_config,

@@ -55,11 +55,12 @@ def login(request: Request):
             access_type="offline",
             prompt="consent",
         )
+
         request.session["state"] = state
-        logger.info("OAuth state saved: %s", state)
+
         return RedirectResponse(auth_url)
 
-    except Exception as e:
+    except Exception:
         logger.exception("Login error")
         raise HTTPException(status_code=500, detail="Login failed")
 
@@ -68,7 +69,6 @@ def login(request: Request):
 def oauth_callback(request: Request):
     state = request.session.get("state")
     if not state:
-        logger.error("OAuth state missing — session cookie lost")
         return RedirectResponse("/login")
 
     try:
@@ -79,10 +79,9 @@ def oauth_callback(request: Request):
             flow.credentials.to_json()
         )
 
-        logger.info("OAuth success, token stored in session")
         return RedirectResponse("/courses")
 
-    except Exception as e:
+    except Exception:
         logger.exception("OAuth callback failed")
         return RedirectResponse("/login")
 
@@ -101,7 +100,10 @@ def courses(request: Request):
 
     return templates.TemplateResponse(
         "courses.html",
-        {"request": request, "courses": courses},
+        {
+            "request": request,
+            "courses": courses,
+        },
     )
 
 
@@ -120,8 +122,8 @@ def download(request: Request, course_ids: list[str] = Form(...)):
     def gen():
         for cid in course_ids:
             files = list_course_files(classroom, cid)
-            for fid, name in files:
-                file_name, data = download_file_bytes(drive, fid)
-                yield f"{cid}/{file_name}", data
+            for fid, _ in files:
+                name, data = download_file_bytes(drive, fid)
+                yield f"{cid}/{name}", data
 
     return stream_zip(gen())
