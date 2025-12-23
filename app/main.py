@@ -23,8 +23,7 @@ IS_CLOUD_RUN = os.environ.get("K_SERVICE") is not None
 if not SESSION_SECRET:
     if IS_CLOUD_RUN:
         raise RuntimeError("SESSION_SECRET not set")
-    else:
-        SESSION_SECRET = "dev-secret"
+    SESSION_SECRET = "dev-secret"
 
 app = FastAPI()
 
@@ -34,7 +33,6 @@ app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET,
     session_cookie="classroom_session_v5",
-
     same_site="none" if IS_CLOUD_RUN else "lax",
     https_only=IS_CLOUD_RUN,
 )
@@ -45,11 +43,14 @@ templates = Jinja2Templates(directory="app/templates")
 def home():
     return RedirectResponse("/login")
 
+
 @app.get("/login")
 def login(request: Request):
     request.session.clear()
+
     if IS_CLOUD_RUN:
         request.scope["scheme"] = "https"
+
     try:
         flow = get_flow(request)
         auth_url, state = flow.authorization_url(
@@ -59,9 +60,11 @@ def login(request: Request):
         )
         request.session["state"] = state
         return RedirectResponse(auth_url)
+
     except Exception as e:
         logger.error(f"Login error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Login failed")
+
 
 @app.get("/callback")
 def oauth_callback(request: Request):
@@ -69,22 +72,21 @@ def oauth_callback(request: Request):
         request.scope["scheme"] = "https"
 
     state = request.session.get("state")
-    
+    if not state:
+        logger.error("Missing OAuth state (session cookie lost)")
+        return RedirectResponse("/login")
+
     try:
         flow = get_flow(request, state=state)
         flow.fetch_token(authorization_response=str(request.url))
+
         request.session["token"] = json.loads(flow.credentials.to_json())
         return RedirectResponse("/courses")
+
     except Exception as e:
-        logger.error(f"Primary callback failed: {e}")
-        try:
-            flow = get_flow(request, state=None)
-            flow.fetch_token(authorization_response=str(request.url))
-            request.session["token"] = json.loads(flow.credentials.to_json())
-            return RedirectResponse("/courses")
-        except Exception as e2:
-            logger.error(f"Secondary callback failed: {e2}")
-            return RedirectResponse("/login")
+        logger.error(f"OAuth callback failed: {e}")
+        return RedirectResponse("/login")
+
 
 @app.get("/courses")
 def courses(request: Request):
@@ -94,12 +96,15 @@ def courses(request: Request):
     creds = Credentials.from_authorized_user_info(
         request.session["token"], SCOPES
     )
+
     classroom = build("classroom", "v1", credentials=creds)
     courses = list_all_courses(classroom)
 
     return templates.TemplateResponse(
-        "courses.html", {"request": request, "courses": courses}
+        "courses.html",
+        {"request": request, "courses": courses},
     )
+
 
 @app.post("/download")
 def download(request: Request, course_ids: list[str] = Form(...)):
@@ -109,6 +114,7 @@ def download(request: Request, course_ids: list[str] = Form(...)):
     creds = Credentials.from_authorized_user_info(
         request.session["token"], SCOPES
     )
+
     classroom = build("classroom", "v1", credentials=creds)
     drive = build("drive", "v3", credentials=creds)
 
