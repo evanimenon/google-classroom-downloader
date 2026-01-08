@@ -5,27 +5,16 @@ from fastapi.responses import StreamingResponse
 logger = logging.getLogger(__name__)
 
 def stream_zip(generator):
-    def zip_generator():
-        z = zipstream.ZipFile(
-            mode="w",
-            compression=zipstream.ZIP_DEFLATED,
-        )
+    z = zipstream.ZipFile(mode="w", compression=zipstream.ZIP_DEFLATED)
 
-        yield b""
-
-        for path, data in generator:
-            try:
-                z.write_iter(path, [data])
-
-                for chunk in z:
-                    yield chunk
-
-            except Exception as e:
-                logger.exception(f"Failed to add file to zip: {path}")
-                continue
+    
+    for path, data in generator:
+        if path and data:
+            z.write_iter(path, [data])
+            logger.info(f"ADDED TO ZIP: {path}")
 
     return StreamingResponse(
-        zip_generator(),
+        z,
         media_type="application/zip",
         headers={
             "Content-Disposition": "attachment; filename=classroom_download.zip",

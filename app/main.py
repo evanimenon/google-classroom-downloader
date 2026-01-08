@@ -123,13 +123,18 @@ def download(request: Request, course_ids: list[str] = Form(...)):
     drive = build("drive", "v3", credentials=creds)
 
     def gen():
+        logger.info(f"=== STARTING DOWNLOAD FOR {len(course_ids)} COURSES ===")
         for cid in course_ids:
+            logger.info(f"Processing Course: {cid}")
             files = list_course_files(classroom, cid)
             for fid, _ in files:
                 name, data = download_file_bytes(drive, fid)
-                yield f"{cid}/{name}", data
+                if name and data:
+                    yield f"{cid}/{name}", data
+        logger.info("=== ZIP GENERATION COMPLETE ===")
 
     return stream_zip(gen())
+
 
 @app.get("/api/courses/{course_id}/files")
 def get_course_files(request: Request, course_id: str):
