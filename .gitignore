@@ -3,10 +3,6 @@ credentials*.json
 token*.json
 .env
 
-# Allow safe JSON files
-!download_index.json
-!app/templates/*.json
-
 # System & OS files
 .DS_Store
 Thumbs.db
@@ -31,3 +27,6 @@ requirements.txt
 
 # Logs
 *.log
+
+# Private runtime indexes 
+download_index.json
