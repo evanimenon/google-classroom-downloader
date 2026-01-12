@@ -16,13 +16,18 @@ __pycache__/
 *.py[cod]
 *$py.class
 venv/
-/.venv
+.venv/
 ENV/
 
 # Large local data / SDKs
 downloads/
 iiitd-resources/
 google-cloud-sdk/
+
+# Docker & deploy
+Dockerfile
+Procfile
+requirements.txt
 
 # Logs
 *.log
