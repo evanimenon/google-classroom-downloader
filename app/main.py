@@ -35,10 +35,9 @@ app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET,
     session_cookie="classroom_session_v5",
-    same_site="none" if not IS_LOCAL else "lax",#
-    https_only=not IS_LOCAL,#
+    same_site="none" if not IS_LOCAL else "lax",
+    https_only=not IS_LOCAL,
 )
-
 
 templates = Jinja2Templates(directory="app/templates")
 
@@ -110,8 +109,14 @@ def courses(request: Request):
     )
 
 
+# ======================= FIXED ENDPOINT =======================
+
 @app.post("/download")
-def download(request: Request, course_ids: list[str] = Form(...)):
+def download(
+    request: Request,
+    course_ids: list[str] = Form(None),
+    file_ids: list[str] = Form(None),
+):
     if "token" not in request.session:
         return RedirectResponse("/login")
 
@@ -123,17 +128,27 @@ def download(request: Request, course_ids: list[str] = Form(...)):
     drive = build("drive", "v3", credentials=creds)
 
     def gen():
-        logger.info(f"=== STARTING DOWNLOAD FOR {len(course_ids)} COURSES ===")
-        for cid in course_ids:
-            logger.info(f"Processing Course: {cid}")
-            files = list_course_files(classroom, cid)
-            for fid, _ in files:
+        if file_ids:
+            logger.info(f"=== DOWNLOADING {len(file_ids)} SELECTED FILES ===")
+            for fid in file_ids:
                 name, data = download_file_bytes(drive, fid)
                 if name and data:
-                    yield f"{cid}/{name}", data
+                    yield f"files/{name}", data
+        else:
+            logger.info(f"=== STARTING DOWNLOAD FOR {len(course_ids)} COURSES ===")
+            for cid in course_ids:
+                logger.info(f"Processing Course: {cid}")
+                files = list_course_files(classroom, cid)
+                for fid, _ in files:
+                    name, data = download_file_bytes(drive, fid)
+                    if name and data:
+                        yield f"{cid}/{name}", data
         logger.info("=== ZIP GENERATION COMPLETE ===")
 
     return stream_zip(gen())
+
+
+# =============================================================
 
 
 @app.get("/api/courses/{course_id}/files")
@@ -145,5 +160,4 @@ def get_course_files(request: Request, course_id: str):
     classroom = build("classroom", "v1", credentials=creds)
     
     files = list_course_files(classroom, course_id)
-    # Format: [{"id": "...", "name": "..."}, ...]
     return [{"id": f[0], "name": f[1]} for f in files]

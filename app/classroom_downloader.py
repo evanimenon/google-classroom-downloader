@@ -29,9 +29,7 @@ INDEX_FILE = "download_index.json"
 # ---------- AUTH HELPERS ----------
 
 def get_credentials() -> Credentials:
-    """
-    Load credentials from token.json, or start OAuth flow from credentials.json.
-    """
+
     creds = None
     if os.path.exists(TOKEN_FILE):
         creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
@@ -58,9 +56,7 @@ def get_credentials() -> Credentials:
 # ---------- UTILS ----------
 
 def safe_filename(name: str) -> str:
-    """
-    Make a filesystem-safe, not-too-long filename from an arbitrary string.
-    """
+
     if not name:
         name = "unnamed"
     # Replace bad chars
@@ -73,9 +69,7 @@ def safe_filename(name: str) -> str:
 
 
 def load_index() -> Set[str]:
-    """
-    Load previously downloaded file IDs from INDEX_FILE.
-    """
+
     if not os.path.exists(INDEX_FILE):
         return set()
     try:
@@ -88,9 +82,6 @@ def load_index() -> Set[str]:
 
 
 def save_index(downloaded_ids: Set[str]) -> None:
-    """
-    Save downloaded file IDs to INDEX_FILE.
-    """
     with open(INDEX_FILE, "w", encoding="utf-8") as f:
         json.dump({"downloaded_ids": sorted(downloaded_ids)}, f, indent=2)
 
@@ -123,10 +114,6 @@ def list_all_courses(classroom_service, name_contains: str = None) -> List[Dict]
 
 
 def list_course_files(classroom_service, course_id: str) -> List[Tuple[str, str]]:
-    """
-    For a given course, return list of (drive_file_id, name_hint).
-    Combines CourseWork (assignments) and CourseWorkMaterials.
-    """
     files: List[Tuple[str, str]] = []
 
     # ---- Coursework (assignments, quizzes etc.) ----
@@ -197,10 +184,7 @@ def download_drive_file(
     mime_type: str,
     dry_run: bool = False,
 ) -> None:
-    """
-    Download a Drive file to dest_path.
-    Handles Google Docs / Sheets / Slides export via files.export.
-    """
+
     dest_path.parent.mkdir(parents=True, exist_ok=True)
 
     if dry_run:
@@ -226,10 +210,6 @@ def download_drive_file(
 
 
 def ensure_extension(name: str, mime_type: str) -> str:
-    """
-    For Google Docs/Slides/Sheets, add a sensible extension when exporting.
-    For other mimetypes, keep the original name.
-    """
     if mime_type in GOOGLE_DOC_TYPES:
         export_mime, ext = GOOGLE_DOC_TYPES[mime_type]
         if not name.lower().endswith(ext):
