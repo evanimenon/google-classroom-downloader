@@ -1,7 +1,6 @@
 # Google Classroom Auto File Downloader
 
-###NOTE: im currently developing a web version of this for easier access for people who prefer not to run scripts locally. the web version is on hold while i wait for google oauth verification!! please stay tuned and thank you for the patience
-
+NOTE: I have developed a full web version of this tool for easier access by users who prefer not to run scripts locally. The website is currently pending Google OAuth verification. Once complete, public access will be enabled. Please stay tuned and thank you for your patience!
 
 
 Automatically download all attachments (assignments, materials, links, PDFs, Docs, Slides, etc.) from your Google Classroom courses using the official Google Classroom + Drive APIs.

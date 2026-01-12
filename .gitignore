@@ -24,6 +24,8 @@ google-cloud-sdk/
 Dockerfile
 Procfile
 requirements.txt
+!cli/requirements.txt
+
 
 # Logs
 *.log
