@@ -1,132 +1,112 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Classroom Downloader</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap');
-        .terminal-font { font-family: 'Fira+Code', monospace; }
-        .drawer-transition { transition: transform 0.3s ease-in-out; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Classroom File Downloader</title>
+<link rel="icon" href="/docs/gcdicon.png">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+body { font-family: 'Inter', system-ui; background:#f7f9fc; }
+</style>
 </head>
-<body class="bg-gray-50 text-gray-900 overflow-x-hidden">
 
-    <header class="bg-white border-b p-4 flex justify-between items-center">
-        <h1 class="text-xl font-bold text-indigo-600">Classroom Downloader</h1>
-        <div class="text-sm text-gray-500">2025-12-24</div>
-    </header>
+<body class="text-gray-800">
 
-    <main class="max-w-6xl mx-auto p-6">
-        
-        <section class="mb-8">
-            <div class="bg-gray-900 rounded-lg shadow-xl overflow-hidden">
-                <div class="bg-gray-800 px-4 py-2 flex items-center gap-2">
-                    <div class="w-3 h-3 rounded-full bg-red-500"></div>
-                    <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
-                    <div class="w-3 h-3 rounded-full bg-green-500"></div>
-                    <span class="text-xs text-gray-400 ml-2 terminal-font">system_status.log</span>
-                </div>
-                <div id="terminal" class="h-48 overflow-y-auto p-4 terminal-font text-sm text-green-400 space-y-1">
-                    <p>> System initialized...</p>
-                    <p>> Ready to fetch course data.</p>
-                </div>
-            </div>
-        </section>
+<header class="bg-white border-b p-5 flex justify-between items-center">
+  <h1 class="text-xl font-bold text-indigo-600">Classroom File Downloader</h1>
+</header>
 
-        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {% for c in courses %}
-            <div class="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
-                <div>
-                    <h3 class="font-bold text-lg mb-2 text-gray-800">{{ c.name }}</h3>
-                    <p class="text-xs text-gray-400 uppercase tracking-wider mb-4">{{ c.courseState }}</p>
-                </div>
-                <button 
-                    onclick="openDrawer('{{ c.id }}', '{{ c.name }}')"
-                    class="w-full py-2 bg-indigo-50 text-indigo-600 rounded-lg font-medium hover:bg-indigo-100 transition-colors">
-                    Manage Files
-                </button>
-            </div>
-            {% endfor %}
-        </section>
-    </main>
+<main class="max-w-6xl mx-auto p-6">
 
-    <div id="drawerOverlay" class="fixed inset-0 bg-black/50 hidden z-40" onclick="closeDrawer()"></div>
-    <div id="drawer" class="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 transform translate-x-full drawer-transition flex flex-col">
-        <div class="p-6 border-b flex justify-between items-center bg-gray-50">
-            <div>
-                <h2 id="drawerTitle" class="font-bold text-xl">Course Files</h2>
-                <p class="text-sm text-gray-500">Select files to include in ZIP</p>
-            </div>
-            <button onclick="closeDrawer()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-        </div>
+<!-- Terminal -->
+<div class="bg-gray-900 rounded-xl shadow-lg overflow-hidden mb-10">
+  <div class="bg-gray-800 px-4 py-2 text-xs text-gray-300">system_status.log</div>
+  <div class="p-4 font-mono text-green-400 text-sm space-y-1" id="terminal">
+    <p>> System initialized...</p>
+    <p>> Ready to fetch course data.</p>
+  </div>
+</div>
 
-        <form action="/download" method="post" class="flex-1 flex flex-col overflow-hidden">
-            <input type="hidden" name="course_ids" id="activeCourseId">
-            
-            <div id="fileList" class="flex-1 overflow-y-auto p-6 space-y-3">
-                <p class="text-center text-gray-400 italic py-10">Loading files...</p>
-            </div>
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+{% for c in courses %}
+<div class="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+  <div>
+    <h3 class="font-bold text-lg mb-1">{{ c.name }}</h3>
+    <span class="inline-block text-xs px-3 py-1 rounded-full 
+      {% if c.courseState == 'ACTIVE' %}
+      bg-green-100 text-green-700
+      {% else %}
+      bg-gray-200 text-gray-500
+      {% endif %}">
+      {{ c.courseState }}
+    </span>
+  </div>
+  <button onclick="openDrawer('{{ c.id }}','{{ c.name }}')"
+    class="mt-5 py-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition">
+    Manage Files
+  </button>
+</div>
+{% endfor %}
+</section>
 
-            <div class="p-6 border-t bg-gray-50">
-                <button type="submit" class="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all">
-                    Download Selected Files
-                </button>
-            </div>
-        </form>
-    </div>
+<!-- Credit -->
+<div class="mt-12 text-center text-sm text-gray-400">
+  Made by <span class="font-semibold text-gray-500">Evani Menon</span>
+</div>
+</main>
 
-    <script>
-        const terminal = document.getElementById('terminal');
-        const drawer = document.getElementById('drawer');
-        const drawerOverlay = document.getElementById('drawerOverlay');
-        const fileListContainer = document.getElementById('fileList');
+<!-- Drawer -->
+<div id="drawerOverlay" onclick="closeDrawer()" class="fixed inset-0 bg-black/40 hidden z-40"></div>
+<div id="drawer" class="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl z-50 transform translate-x-full transition">
 
-        function logToTerminal(msg) {
-            const p = document.createElement('p');
-            p.textContent = `> ${msg}`;
-            terminal.appendChild(p);
-            terminal.scrollTop = terminal.scrollHeight;
-        }
+<div class="p-6 border-b flex justify-between items-center">
+  <div>
+    <h2 id="drawerTitle" class="font-bold text-xl"></h2>
+    <p class="text-sm text-gray-500">Select files to include</p>
+  </div>
+  <button onclick="closeDrawer()" class="text-3xl text-gray-400">&times;</button>
+</div>
 
-        async function openDrawer(courseId, courseName) {
-            document.getElementById('drawerTitle').innerText = courseName;
-            document.getElementById('activeCourseId').value = courseId;
-            fileListContainer.innerHTML = '<p class="text-center text-gray-400 animate-pulse">Fetching Classroom data...</p>';
-            
-            // UI Show
-            drawer.classList.remove('translate-x-full');
-            drawerOverlay.classList.remove('hidden');
-            logToTerminal(`Opening course: ${courseName}`);
+<form action="/download" method="post" class="flex flex-col h-full">
+<input type="hidden" name="course_ids" id="activeCourseId">
 
-            try {
-                const response = await fetch(`/api/courses/${courseId}/files`);
-                const files = await response.json();
-                
-                if (files.length === 0) {
-                    fileListContainer.innerHTML = '<p class="text-center text-red-400">No files found in this course.</p>';
-                    return;
-                }
+<div id="fileList" class="flex-1 overflow-y-auto p-6 space-y-3 text-sm text-gray-700"></div>
 
-                fileListContainer.innerHTML = files.map(file => `
-                    <label class="flex items-start gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                        <input type="checkbox" name="file_ids" value="${file.id}" checked class="mt-1 w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                        <span class="text-sm text-gray-700 break-all">${file.name}</span>
-                    </label>
-                `).join('');
-                
-                logToTerminal(`Found ${files.length} files available for download.`);
-            } catch (err) {
-                logToTerminal(`Error: Failed to fetch files.`);
-                fileListContainer.innerHTML = '<p class="text-center text-red-500">Error loading files.</p>';
-            }
-        }
+<div class="p-6 border-t">
+<button type="submit" class="w-full py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700">
+Download Selected Files
+</button>
+</div>
+</form>
+</div>
 
-        function closeDrawer() {
-            drawer.classList.add('translate-x-full');
-            drawerOverlay.classList.add('hidden');
-        }
-    </script>
+<script>
+const terminal = document.getElementById("terminal");
+function logToTerminal(m){terminal.innerHTML+=`<p>> ${m}</p>`}
+
+async function openDrawer(id,name){
+ document.getElementById("drawerTitle").innerText=name;
+ document.getElementById("activeCourseId").value=id;
+ document.getElementById("fileList").innerHTML="<p class='text-center text-gray-400'>Loading...</p>";
+ document.getElementById("drawer").classList.remove("translate-x-full");
+ document.getElementById("drawerOverlay").classList.remove("hidden");
+ logToTerminal("Opening course: "+name);
+
+ const r = await fetch(`/api/courses/${id}/files`);
+ const f = await r.json();
+ document.getElementById("fileList").innerHTML = f.map(x=>`
+ <label class="block p-3 border rounded-lg hover:bg-gray-50">
+  <input type="checkbox" checked name="file_ids" value="${x.id}">
+  ${x.name}
+ </label>`).join("");
+ logToTerminal(`Found ${f.length} files available for download.`);
+}
+function closeDrawer(){
+ document.getElementById("drawer").classList.add("translate-x-full");
+ document.getElementById("drawerOverlay").classList.add("hidden");
+}
+</script>
 </body>
 </html>

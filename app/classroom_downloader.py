@@ -89,6 +89,13 @@ def save_index(downloaded_ids: Set[str]) -> None:
     with open(INDEX_FILE, "w", encoding="utf-8") as f:
         json.dump({"downloaded_ids": sorted(downloaded_ids)}, f, indent=2)
 
+def color_status(status: str) -> str:
+    if status == "ACTIVE":
+        return f"\033[92m{status}\033[0m"      # Green
+    elif status == "ARCHIVED":
+        return f"\033[90m{status}\033[0m"      # Grey
+    else:
+        return status
 
 # ---------- CLASSROOM HELPERS ----------
 
@@ -298,7 +305,8 @@ def select_courses_interactively(courses: List[Dict]) -> List[Dict]:
     for idx, c in enumerate(courses, start=1):
         name = c.get("name", "Unnamed")
         state = c.get("courseState", "UNKNOWN")
-        print(f"[{idx}] {name} ({state})")
+        print(f"[{idx}] {name} ({color_status(state)})")
+
 
     raw = input(
         "\nEnter course numbers to download "
