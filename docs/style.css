@@ -1,0 +1,84 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #f7f9fc;
+  color: #1f2937;
+}
+
+a { text-decoration: none; color: #4f46e5; }
+
+.container {
+  max-width: 1100px;
+  margin: auto;
+  padding: 40px 20px;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.brand {
+  font-size: 26px;
+  font-weight: 700;
+  color: #4f46e5;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 30px;
+  margin-top: 70px;
+}
+
+.hero h1 {
+  font-size: 44px;
+  margin: 0;
+}
+
+.hero p {
+  font-size: 18px;
+  color: #4b5563;
+  max-width: 700px;
+}
+
+.button {
+  display: inline-block;
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  color: white;
+  padding: 16px 30px;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  box-shadow: 0 10px 30px rgba(79,70,229,.35);
+  transition: 0.25s;
+}
+
+.button:hover { transform: translateY(-2px); }
+
+.cards {
+  margin-top: 80px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(240px,1fr));
+  gap: 25px;
+}
+
+.card {
+  background: white;
+  border-radius: 16px;
+  padding: 25px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.05);
+}
+
+.footer {
+  margin-top: 100px;
+  padding-top: 30px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  color: #6b7280;
+  font-size: 14px;
+}
