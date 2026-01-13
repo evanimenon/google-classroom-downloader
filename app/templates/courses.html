@@ -22,12 +22,20 @@ body { font-family: 'Inter', system-ui; background:#f7f9fc; }
 
 <!-- Terminal -->
 <div class="bg-gray-900 rounded-xl shadow-lg overflow-hidden mb-10">
-  <div class="bg-gray-800 px-4 py-2 text-xs text-gray-300">system_status.log</div>
-  <div class="p-4 font-mono text-green-400 text-sm space-y-1" id="terminal">
+  <div class="bg-gray-800 px-4 py-2 text-xs text-gray-300">
+    system_status.log
+  </div>
+
+  <!-- FIXED HEIGHT + INTERNAL SCROLL -->
+  <div id="terminal"
+       class="p-4 font-mono text-green-400 text-sm space-y-1
+              h-64 max-h-64 overflow-y-auto overflow-x-hidden
+              scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
     <p>> System initialized...</p>
     <p>> Ready to fetch course data.</p>
   </div>
 </div>
+
 
 <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 {% for c in courses %}
