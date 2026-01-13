@@ -21,9 +21,6 @@ iiitd-resources/
 google-cloud-sdk/
 
 # Docker & deploy
-Dockerfile
-Procfile
-requirements.txt
 !cli/requirements.txt
 
 
