@@ -13,11 +13,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 from googleapiclient.errors import HttpError
 
-
-# ============================================================
-# SCOPES
-# ============================================================
-
+# ---- SCOPES ----
 SCOPES = [
     "https://www.googleapis.com/auth/classroom.courses.readonly",
     "https://www.googleapis.com/auth/classroom.courseworkmaterials.readonly",
@@ -26,22 +22,20 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive.readonly",
 ]
 
+
+
 TOKEN_FILE = "token.json"
 INDEX_FILE = "download_index.json"
 
 
-# ============================================================
-# AUTHENTICATION
-# ============================================================
+# ---------- AUTH HELPERS ----------
+
 
 def get_credentials():
     """
-    Load credentials from token.json.
-    If unavailable or invalid, authenticate using credentials.json.
+    Load credentials from token.json, or start OAuth flow from credentials.json.
     """
-
     creds = None
-
     if os.path.exists(TOKEN_FILE):
         try:
             creds = Credentials.from_authorized_user_file(
@@ -52,24 +46,17 @@ def get_credentials():
             creds = None
 
     if not creds or not creds.valid:
-
         if creds and creds.expired and creds.refresh_token:
-
             creds.refresh(Request())
-
         else:
-
             if not os.path.exists("credentials.json"):
                 raise FileNotFoundError(
                     "credentials.json not found. "
-                    "Place it in the same folder as this script."
+                    "Download it from Google Cloud Console and place it next to this script."
                 )
-
             flow = InstalledAppFlow.from_client_secrets_file(
-                "credentials.json",
-                SCOPES
+                "credentials.json", SCOPES
             )
-
             creds = flow.run_local_server(port=0)
 
         with open(TOKEN_FILE, "w", encoding="utf-8") as token:
@@ -78,15 +65,13 @@ def get_credentials():
     return creds
 
 
-# ============================================================
-# UTILITY FUNCTIONS
-# ============================================================
+# ---------- UTILS ----------
+
 
 def safe_filename(name):
     """
-    Convert a filename into a Windows-safe filename.
+    Make a filesystem-safe, not-too-long filename from an arbitrary string.
     """
-
     if not name:
         name = "unnamed"
 
@@ -103,36 +88,28 @@ def safe_filename(name):
 
 def load_index():
     """
-    Load IDs of successfully downloaded files.
+    Load previously downloaded file IDs from INDEX_FILE.
     """
-
     if not os.path.exists(INDEX_FILE):
         return set()
-
     try:
         with open(INDEX_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
-
         return set(data.get("downloaded_ids", []))
-
     except Exception:
+        # If corrupted, ignore
         return set()
 
 
 def save_index(downloaded_ids):
     """
-    Save IDs of successfully downloaded files.
+    Save downloaded file IDs to INDEX_FILE.
     """
-
     with open(INDEX_FILE, "w", encoding="utf-8") as f:
-        json.dump(
-            {
-                "downloaded_ids": sorted(downloaded_ids)
-            },
-            f,
-            indent=2
-        )
+        json.dump({"downloaded_ids": sorted(downloaded_ids)}, f, indent=2)
 
+
+# ---------- CLASSROOM HELPERS ----------
 
 # ============================================================
 # LIST COURSES
@@ -177,12 +154,9 @@ def list_all_courses(classroom_service, name_contains=None):
 def extract_drive_files(materials, default_title):
 
     """
-    Extract Drive file IDs from a Classroom materials list.
-
-    Returns:
-        List of tuples:
-        (file_id, title_hint)
-    """
+    For a given course, return list of (drive_file_id, name_hint).
+    Combines CourseWork (assignments) and CourseWorkMaterials.
+     """
 
     files = []
 
@@ -417,25 +391,20 @@ def list_course_files(classroom_service, course_id):
     return files
 
 
-# ============================================================
-# GOOGLE FILE EXPORT TYPES
-# ============================================================
+# ---------- DRIVE DOWNLOAD HELPERS ----------
 
 GOOGLE_DOC_TYPES = {
-
-    "application/vnd.google-apps.document": (
+    "application/vnd.google-apps.document": (  # Docs
         "application/pdf",
-        ".pdf"
+        ".pdf",
     ),
-
-    "application/vnd.google-apps.presentation": (
+    "application/vnd.google-apps.presentation": (  # Slides
         "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        ".pptx"
+        ".pptx",
     ),
-
-    "application/vnd.google-apps.spreadsheet": (
+    "application/vnd.google-apps.spreadsheet": (  # Sheets
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        ".xlsx"
+        ".xlsx",
     ),
 }
 
@@ -482,24 +451,13 @@ def download_drive_file(
 
         return
 
-
-    # --------------------------------------------------------
-    # Google Docs / Slides / Sheets
-    # --------------------------------------------------------
-
     if mime_type in GOOGLE_DOC_TYPES:
 
         export_mime, _ = GOOGLE_DOC_TYPES[mime_type]
 
         request = drive_service.files().export_media(
-            fileId=file_id,
-            mimeType=export_mime
+            fileId=file_id, mimeType=export_mime
         )
-
-    # --------------------------------------------------------
-    # Normal files: PDF, PPTX, DOCX, ZIP, images, etc.
-    # --------------------------------------------------------
-
     else:
 
         request = drive_service.files().get_media(
@@ -525,9 +483,7 @@ def download_drive_file(
             _, done = downloader.next_chunk()
 
 
-# ============================================================
-# DOWNLOAD ALL FILES FOR ONE COURSE
-# ============================================================
+# ---------- CORE LOGIC ----------
 
 def download_all_for_course(
     classroom_service,
@@ -760,15 +716,12 @@ def download_all_for_course(
 # ============================================================
 
 def parse_args():
-
     parser = argparse.ArgumentParser(
         description=(
             "Download Google Classroom Drive attachments "
             "from Coursework, Materials and ALL Stream Announcements."
         )
     )
-
-
     parser.add_argument(
         "--base-dir",
         default="downloads",
@@ -777,8 +730,6 @@ def parse_args():
             "Default: downloads"
         )
     )
-
-
     parser.add_argument(
         "--course-name-contains",
         default=None,
@@ -786,8 +737,6 @@ def parse_args():
             "Only process courses whose names contain this text."
         )
     )
-
-
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -795,17 +744,10 @@ def parse_args():
             "Scan all files without downloading."
         )
     )
-
-
     return parser.parse_args()
 
 
-# ============================================================
-# MAIN
-# ============================================================
-
 def main():
-
     args = parse_args()
 
     base_dir = pathlib.Path(
@@ -822,91 +764,33 @@ def main():
     # --------------------------------------------------------
 
     creds = get_credentials()
+    classroom_service = build("classroom", "v1", credentials=creds)
+    drive_service = build("drive", "v3", credentials=creds)
 
-
-    # --------------------------------------------------------
-    # Create Classroom API client
-    # --------------------------------------------------------
-
-    classroom_service = build(
-        "classroom",
-        "v1",
-        credentials=creds
-    )
-
-
-    # --------------------------------------------------------
-    # Create Drive API client
-    # --------------------------------------------------------
-
-    drive_service = build(
-        "drive",
-        "v3",
-        credentials=creds
-    )
-
-
-    # --------------------------------------------------------
-    # Load successful download history
-    # --------------------------------------------------------
-
-    print(
-        "Loading download index..."
-    )
-
+    print("Loading download index...")
     downloaded_ids = load_index()
 
-
-    # --------------------------------------------------------
-    # Fetch courses
-    # --------------------------------------------------------
-
-    print(
-        "Fetching courses..."
-    )
-
-    courses = list_all_courses(
-        classroom_service,
-        args.course_name_contains
-    )
-
+    print("Fetching courses...")
+    courses = list_all_courses(classroom_service, args.course_name_contains)
 
     if not courses:
-
-        print(
-            "No courses found."
-        )
-
+        print("No courses found that match your filter.")
         return
 
+    print(f"Found {len(courses)} course(s).")
 
-    print(
-        f"Found {len(courses)} course(s)."
-    )
-
-
-    # --------------------------------------------------------
-    # Process every course
-    # --------------------------------------------------------
-
-    for course in courses:
-
+    for c in courses:
         download_all_for_course(
             classroom_service,
             drive_service,
-            course,
+            c,
             base_dir,
             downloaded_ids,
-            dry_run=args.dry_run
+            dry_run=args.dry_run,
         )
 
-
-    # --------------------------------------------------------
-    # Final save
-    # --------------------------------------------------------
-
     if not args.dry_run:
-
+        print("\nSaving download index...")
         save_index(downloaded_ids)
 
         print()
@@ -939,23 +823,8 @@ def main():
 
 
     else:
+        print("\nDry run completed. No files were actually downloaded.")
 
-        print()
-
-        print(
-            "DRY RUN COMPLETE."
-        )
-
-        print(
-            "No files were downloaded."
-        )
-
-
-# ============================================================
-# START
-# ============================================================
 
 if __name__ == "__main__":
     main()
-
-
