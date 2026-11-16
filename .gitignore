@@ -29,3 +29,7 @@ google-cloud-sdk/
 
 # Private runtime indexes 
 download_index.json
+
+# Downloader state
+.classroom-downloader-index.json
+*.part

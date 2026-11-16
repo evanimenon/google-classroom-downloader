@@ -1,189 +1,70 @@
-# Google Classroom Auto File Downloader
+# Google Classroom Downloader
 
-###NOTE: im currently developing a web version of this for easier access for people who prefer not to run scripts locally. the web version is on hold while i wait for google oauth verification!! please stay tuned and thank you for the patience
+Downloads every file from your Google Classroom classes, sorted into folders by topic.
 
+<p align="center">
+  <img src="assets/pick-classes.svg" alt="Picking classes" width="720">
+</p>
 
+- Gets Classwork materials, assignments, and files posted on the Stream
+- Sorts files into folders named after your class's topics
+- Downloads attached Drive folders
+- Converts Docs to PDF, Slides to PPTX, Sheets to XLSX
+- Saves shared links and videos to `Links.md`
+- Only downloads new or updated files on later runs
 
-Automatically download all attachments (assignments, materials, links, PDFs, Docs, Slides, etc.) from your Google Classroom courses using the official Google Classroom + Drive APIs.
+## Install
 
----
-<img width="1496" height="934" alt="Screenshot 2025-11-30 at 11 49 51" src="https://github.com/user-attachments/assets/dbb28418-cc97-49e0-8400-b87227a8c655" />
-
-
-## Features
-
-- Downloads **all Drive attachments** from every Classroom course and organizes downloads into folders per course  
-- Converts Google Docs → PDF, Slides → PPTX, Sheets → XLSX  
-- Skips previously downloaded files automatically  
-- Filters by course name  
-- Fully secure OAuth authentication and 100% compliant with Google API policies  
-
----
-
-## Project Structure
-
-```
-
-google-classroom-downloader/
-│
-├── cli/
-│ ├── classroom_downloader.py # Main script
-│ ├── requirements.txt # Dependencies
-│ └── README.md
-│
-├── docs/ # Legal / public website
-├── web/ # Cloud Run web app
-└── README.md # Project root README
-
-````
-
----
-
-
-## Installation
-
-### 1. Clone this repository
+Needs Python 3.9+.
 
 ```bash
 git clone https://github.com/evanimenon/google-classroom-downloader.git
 cd google-classroom-downloader/cli
-````
+python3 -m pip install -r requirements.txt
+python3 classroom_downloader.py
+```
 
-### 2. Install dependencies
+## First run
+
+Until Google verifies the app, everyone needs their own free login key. The first run walks you through making one in about 3 minutes. It opens each page for you and finds the downloaded file on its own.
+
+<p align="center">
+  <img src="assets/setup.svg" alt="Setup wizard" width="720">
+</p>
+
+Then sign in with your Classroom account. If Google says the app isn't verified, click **Continue**. Access is read-only.
+
+## Output
+
+Files are saved to `~/Classroom Downloads`:
+
+<p align="center">
+  <img src="assets/folders.svg" alt="Downloaded folders" width="520">
+</p>
+
+## Flags
+
+The menus cover everything. Use these flags if you want to skip the menus, for example in a script:
 
 ```bash
-pip install -r requirements.txt
+python3 classroom_downloader.py --all                   # all active classes
+python3 classroom_downloader.py --course "Linear"       # classes matching a name
+python3 classroom_downloader.py --all --layout flat     # layouts: topic, post, flat
+python3 classroom_downloader.py --all --dry-run         # preview only
+python3 classroom_downloader.py --switch-account
 ```
 
-(Optional virtual environment)
+See `--help` for the rest.
 
-```bash
-python3 -m venv venv
-source venv/bin/activate   # macOS / Linux
-# OR
-venv\Scripts\activate      # Windows
-```
+## Troubleshooting
 
----
+- **Access blocked / not verified:** add your email under Test users on the [Audience page](https://console.cloud.google.com/auth/audience).
+- **Blocked by your admin:** run `--setup` again, make the project with your school account, and choose Internal.
+- **Signs you out every week:** click Publish app on the [Audience page](https://console.cloud.google.com/auth/audience).
+- **API not enabled:** turn on the [Classroom API](https://console.cloud.google.com/apis/library/classroom.googleapis.com) and the [Drive API](https://console.cloud.google.com/apis/library/drive.googleapis.com).
 
-## Google OAuth Setup (One-Time)
+Don't commit `credentials.json`, `token.json`, or anything in `~/.classroom-downloader/`.
 
-Follow these steps carefully.
+## License
 
-### 1. Open Google Cloud Console
-[https://console.cloud.google.com/](https://console.cloud.google.com/)
-
-<img width="1446" height="893" alt="Screenshot 2025-11-30 at 01 57 31" src="https://github.com/user-attachments/assets/d695f9a7-6bac-422e-872e-54da2210b76d" />
-
-
-### 2. Create a New Project
-**IAM & Admin → Create Project**
-Project name: `Classroom Downloader`
-<img width="1446" height="891" alt="Screenshot 2025-11-30 at 02 01 39" src="https://github.com/user-attachments/assets/7997fa7a-d279-4ec6-bfad-b1ea076c255a" />
-
-
-### 3. Enable APIs
-
-Go to: **APIs & Services → Enable APIs & Services**
-
-Enable:
-
-* **Google Classroom API**
-* **Google Drive API**
-<img width="1444" height="891" alt="Screenshot 2025-11-30 at 02 03 16" src="https://github.com/user-attachments/assets/2028fdd2-322d-44a7-b31f-287ab0a91eeb" />
-
-### 4. Configure OAuth Consent Screen
-
-Left sidebar → **OAuth consent screen**
-
-* User Type: **External**
-* App Name: `Classroom Downloader`
-* Add your email under **Test Users**
-* Save
-
-### 5. Create OAuth Desktop Credentials
-
-Left sidebar → **APIs and Services → OAuth Consent Screen → Clients → Create Client**
-
-* Application type: **Desktop App**
-* Name: `Classroom Desktop`
-* Click **Download JSON**
-<img width="1447" height="892" alt="Screenshot 2025-11-30 at 02 03 54" src="https://github.com/user-attachments/assets/bea31c22-dfca-4484-b020-95c4e51e2267" />
-
-Rename the downloaded file to:
-
-```
-credentials.json
-```
-
-Place it inside:
-
-```
-google-classroom-downloader/cli/credentials.json
-```
-
----
-
-## Running the Downloader
-
-Run:
-
-```bash
-python classroom_downloader.py
-```
-
-On first run:
-
-* A browser window appears
-* Log in with your Google account
-* Approve the requested permissions
-* `token.json` is generated automatically
-
-Downloads will appear under:
-
-```
-downloads/
-    <Course Name>/
-        file1.pdf
-        file2.docx
-```
-
----
-
-## Advanced Usage
-
-### Download only one course
-
-```bash
-python classroom_downloader.py --course-name-contains "CSE201"
-```
-
-### Run without downloading (simulation)
-
-```bash
-python classroom_downloader.py --dry-run
-```
-
-### Change download directory
-
-```bash
-python classroom_downloader.py --base-dir "/Users/me/ClassroomFiles"
-```
-
----
-
-
-## !!! Security Warning for Contributors !!!
-
-This script uses OAuth tokens.  
-**NEVER upload these files to GitHub:**
-
-- `credentials.json`  
-- `token.json`  
-- `download_index.json`  
-
-The provided `.gitignore` already protects you.
-
-!!! If you accidentally commit these files, revoke the OAuth credential immediately and re-generate it. !!!
-
----
+MIT

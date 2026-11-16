@@ -1,10 +1,6 @@
-fastapi
-uvicorn
-starlette
-jinja2
-google-auth
-google-auth-oauthlib
-google-api-python-client
-python-multipart
-itsdangerous
-zipstream-new
+google-auth>=2.20
+google-auth-oauthlib>=1.0
+google-api-python-client>=2.100
+requests>=2.28
+rich>=13.0
+questionary>=2.0
