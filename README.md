@@ -56,6 +56,8 @@ python3 classroom_downloader.py --switch-account
 
 See `--help` for the rest.
 
+Inside the menus, press **Esc** to go back one step. On the main menu it quits, and **Ctrl-C** always exits.
+
 ## Troubleshooting
 
 - **Access blocked / not verified:** add your email under Test users on the [Audience page](https://console.cloud.google.com/auth/audience).
