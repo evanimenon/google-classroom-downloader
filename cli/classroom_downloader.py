@@ -49,6 +49,8 @@ try:
     from rich.table import Table
     from rich.text import Text
     from rich.theme import Theme
+    from prompt_toolkit.key_binding import KeyBindings, merge_key_bindings
+    from prompt_toolkit.keys import Keys
 
     from google.auth.exceptions import RefreshError
     from google.auth.transport.requests import AuthorizedSession, Request
@@ -168,8 +170,26 @@ def error(msg: str) -> None:
     console.print(f"[err]✗[/] {msg}")
 
 
+class GoBack(Exception):
+    """Raised when the user presses Esc to return to the previous step."""
+
+
 def ask(question):
-    """Run a questionary prompt; exit cleanly on Ctrl-C / Esc."""
+    """Run a questionary prompt.
+
+    Esc goes back one step (it raises :class:`GoBack`), while Ctrl-C still exits.
+    """
+    bindings = KeyBindings()
+
+    @bindings.add(Keys.Escape, eager=True)
+    def _go_back(event):
+        event.app.exit(exception=GoBack)
+
+    app = question.application
+    app.key_bindings = merge_key_bindings(
+        [kb for kb in (app.key_bindings, bindings) if kb is not None]
+    )
+
     answer = question.ask()
     if answer is None:
         console.print("\n[muted]Bye![/]")
@@ -179,7 +199,7 @@ def ask(question):
 
 def select(message: str, choices, default=None, instruction: Optional[str] = None):
     return ask(questionary.select(message, choices=choices, default=default, style=Q_STYLE,
-                                  instruction=instruction or "(use ↑ ↓ and Enter)"))
+                                  instruction=instruction or "(use ↑ ↓ and Enter · Esc to go back)"))
 
 
 def confirm(message: str, default: bool = True) -> bool:
@@ -380,7 +400,8 @@ def _ask_for_client_file() -> Path:
         return p
 
 
-def run_setup_wizard() -> None:
+def run_setup_wizard() -> bool:
+    """Walk through setup. Returns True when a login key was saved, False if cancelled."""
     console.print()
     console.print(Panel(
         "Google only lets apps it has reviewed log in for everyone, so for now each person "
@@ -390,14 +411,30 @@ def run_setup_wizard() -> None:
         title="[accent]One-time setup[/]", border_style="#34a853", box=box.ROUNDED, padding=(1, 2)))
 
     existing = _find_downloaded_client_file()
-    if existing and confirm(f"Found an existing key ({existing.name}). Skip straight to using it?"):
-        _import_client_file(existing)
-        console.print("[ok]✓ Login key saved.[/]")
-        return
+    if existing:
+        try:
+            use_existing = confirm(f"Found an existing key ({existing.name}). Skip straight to using it?")
+        except GoBack:
+            return False
+        if use_existing:
+            _import_client_file(existing)
+            console.print("[ok]✓ Login key saved.[/]")
+            return True
 
     i = 0
     opened = set()
-    while i < len(SETUP_STEPS):
+    while True:
+        if i >= len(SETUP_STEPS):
+            try:
+                path = _ask_for_client_file()
+            except GoBack:
+                i = len(SETUP_STEPS) - 1
+                continue
+            _import_client_file(path)
+            console.print("[ok]✓ Login key saved[/] [muted](a private copy lives in "
+                          f"{escape(str(CONFIG_DIR))} — you can delete the download).[/]")
+            return True
+
         title, url, lines = SETUP_STEPS[i]
         body = "\n".join(f"  • {l}" for l in lines) + f"\n\n  [link]{url}[/]"
         console.print()
@@ -409,7 +446,16 @@ def run_setup_wizard() -> None:
             choices.append("⬅   Back")
         choices.append("✖   Quit setup")
         default = choices[1] if i in opened else choices[0]
-        choice = select("Next:", choices, default=default)
+        try:
+            choice = select("Next:", choices, default=default,
+                            instruction=("(use ↑ ↓ and Enter · Esc to go back)" if i > 0
+                                         else "(use ↑ ↓ and Enter · Esc to cancel)"))
+        except GoBack:
+            if i == 0:
+                console.print("[muted]Setup cancelled. Run me again any time to continue.[/]")
+                return False
+            i -= 1
+            continue
         if choice.startswith("🌐"):
             webbrowser.open(url)
             opened.add(i)
@@ -421,11 +467,6 @@ def run_setup_wizard() -> None:
         else:
             console.print("[muted]Setup cancelled. Run me again any time to continue.[/]")
             sys.exit(0)
-
-    path = _ask_for_client_file()
-    _import_client_file(path)
-    console.print("[ok]✓ Login key saved[/] [muted](a private copy lives in "
-                  f"{escape(str(CONFIG_DIR))} — you can delete the download).[/]")
 
 
 # ───────────────────────────── auth ─────────────────────────────
@@ -443,7 +484,9 @@ def ensure_client_file() -> None:
     if not sys.stdin.isatty():
         error("No login key found. Run this script once in a terminal to do the setup.")
         sys.exit(1)
-    run_setup_wizard()
+    if not run_setup_wizard():
+        console.print("\n[muted]Bye![/]")
+        sys.exit(0)
 
 
 def browser_login() -> Credentials:
@@ -1010,8 +1053,9 @@ def run_download(classroom, drive, creds, courses: List[Dict], opts: RunOptions)
 
 # ───────────────────────────── interactive flow ─────────────────────────────
 
-def choose_courses(courses: List[Dict], prefs: Dict) -> List[str]:
-    last = set(prefs.get("course_ids", []))
+def choose_courses(courses: List[Dict], prefs: Dict,
+                   selected: Optional[List[str]] = None) -> List[str]:
+    last = set(selected if selected is not None else prefs.get("course_ids", []))
     choices: List = []
     archived_header = False
     for c in courses:
@@ -1027,40 +1071,63 @@ def choose_courses(courses: List[Dict], prefs: Dict) -> List[str]:
         "Which classes?",
         choices=choices,
         style=Q_STYLE,
-        instruction="(↑↓ move · space select · a all · i invert · enter done)",
+        instruction="(↑↓ move · space select · a all · i invert · enter done · esc back)",
         validate=lambda x: True if x else "Pick at least one class (space to select)",
     ))
 
 
-def interactive_options(courses: List[Dict], prefs: Dict) -> RunOptions:
-    course_ids = choose_courses(courses, prefs)
+def interactive_options(courses: List[Dict], prefs: Dict) -> Optional[RunOptions]:
+    """Collect download options. Esc steps back one question; returns None at the first one."""
+    course_ids: List[str] = []
+    preset = "all"
+    sources = prefs.get("sources", ["materials", "assignments", "stream"])
+    layout = prefs.get("layout", "topic")
+    base_dir = Path(prefs.get("base_dir") or (Path.home() / "Classroom Downloads"))
+    step = 0
 
-    preset = select("What should I download?", [
-        Choice("Everything (recommended)", "all"),
-        Choice("Let me choose…", "custom"),
-    ])
-    if preset == "all":
-        sources = ["materials", "assignments", "stream"]
-    else:
-        prev = prefs.get("sources", ["materials", "assignments", "stream"])
-        sources = ask(questionary.checkbox(
-            "Include:", style=Q_STYLE,
-            choices=[Choice(label, key, checked=key in prev) for key, label in SOURCES.items()],
-            validate=lambda x: True if x else "Pick at least one"))
+    while True:
+        try:
+            if step == 0:
+                course_ids = choose_courses(courses, prefs, course_ids or None)
+                step = 1
+            elif step == 1:
+                preset = select("What should I download?", [
+                    Choice("Everything (recommended)", "all"),
+                    Choice("Let me choose…", "custom"),
+                ], default=preset)
+                if preset == "all":
+                    sources = ["materials", "assignments", "stream"]
+                    step = 3
+                else:
+                    step = 2
+            elif step == 2:
+                sources = ask(questionary.checkbox(
+                    "Include:", style=Q_STYLE,
+                    choices=[Choice(label, key, checked=key in sources) for key, label in SOURCES.items()],
+                    instruction="(↑↓ move · space select · a all · i invert · enter done · esc back)",
+                    validate=lambda x: True if x else "Pick at least one"))
+                step = 3
+            elif step == 3:
+                layout = select("How should files be organised?",
+                                [Choice(label, key) for key, label in LAYOUTS.items()],
+                                default=layout)
+                step = 4
+            else:
+                where = ask(questionary.path("Save to folder (Esc to go back):",
+                                             default=str(base_dir), only_directories=True,
+                                             style=Q_STYLE))
+                base_dir = Path(where.strip().strip("'\"")).expanduser()
 
-    layout = select("How should files be organised?",
-                    [Choice(label, key) for key, label in LAYOUTS.items()],
-                    default=prefs.get("layout", "topic"))
-
-    default_dir = prefs.get("base_dir") or str(Path.home() / "Classroom Downloads")
-    where = ask(questionary.path("Save to folder:", default=default_dir, only_directories=True,
-                                 style=Q_STYLE))
-    base_dir = Path(where.strip().strip("'\"")).expanduser()
-
-    prefs.update({"course_ids": course_ids, "sources": sources, "layout": layout,
-                  "base_dir": str(base_dir)})
-    save_json(PREFS_FILE, prefs)
-    return RunOptions(course_ids, sources, layout, base_dir)
+                prefs.update({"course_ids": course_ids, "sources": sources, "layout": layout,
+                              "base_dir": str(base_dir)})
+                save_json(PREFS_FILE, prefs)
+                return RunOptions(course_ids, sources, layout, base_dir)
+        except GoBack:
+            step -= 1
+            if step == 2 and preset != "custom":
+                step -= 1
+            if step < 0:
+                return None
 
 
 def interactive(args) -> None:
@@ -1081,19 +1148,23 @@ def interactive(args) -> None:
         console.print(f"\n[ok]●[/] Signed in as [b]{escape(who)}[/]  "
                       f"[muted]· {len(courses)} classes[/]\n")
 
-        action = select("What would you like to do?", [
-            Choice("⬇   Download files from my classes", "download"),
-            Choice("👤  Switch Google account", "switch"),
-            Choice("🛠   Redo setup (new login key)", "setup"),
-            Choice("👋  Quit", "quit"),
-        ])
+        try:
+            action = select("What would you like to do?", [
+                Choice("⬇   Download files from my classes", "download"),
+                Choice("👤  Switch Google account", "switch"),
+                Choice("🛠   Redo setup (new login key)", "setup"),
+                Choice("👋  Quit", "quit"),
+            ], instruction="(use ↑ ↓ and Enter · Esc to quit)")
+        except GoBack:
+            return
         if action == "quit":
             return
         if action == "switch":
             creds = get_credentials(force_login=True)
             continue
         if action == "setup":
-            run_setup_wizard()
+            if not run_setup_wizard():
+                continue
             creds = get_credentials(force_login=True)
             continue
         if not courses:
@@ -1102,14 +1173,19 @@ def interactive(args) -> None:
 
         prefs = load_json(PREFS_FILE, {})
         opts = interactive_options(courses, prefs)
+        if opts is None:
+            continue
         opts.dry_run = args.dry_run
         base_dir = run_download(classroom, drive, creds, courses, opts)
 
-        nxt = select("Next:", [
-            Choice("📂  Open the download folder", "open"),
-            Choice("↩   Back to the menu", "menu"),
-            Choice("👋  Quit", "quit"),
-        ])
+        try:
+            nxt = select("Next:", [
+                Choice("📂  Open the download folder", "open"),
+                Choice("↩   Back to the menu", "menu"),
+                Choice("👋  Quit", "quit"),
+            ])
+        except GoBack:
+            continue
         if nxt == "open":
             open_path(base_dir)
             return
@@ -1170,7 +1246,8 @@ def main(argv=None) -> None:
         return
     if args.setup:
         banner()
-        run_setup_wizard()
+        if not run_setup_wizard():
+            return
         args.switch_account = True
     try:
         if args.course or args.all or not sys.stdin.isatty():
